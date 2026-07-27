@@ -28,6 +28,11 @@ outputs/*
 !data/sample/
 !data/sample/*.csv
 
+# Local traceability only: archived exports and malformed notebook snapshots
+# must not be committed with active workflow code.
+archive/*
+!archive/README.md
+
 # Do not stage the current notebook until it has been saved/exported as a
 # standard .ipynb document with cleared outputs.
 iterative_discovery.ipynb

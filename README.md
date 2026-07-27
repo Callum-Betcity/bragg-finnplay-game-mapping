@@ -1,38 +1,129 @@
 # Bragg–Finnplay game mapping
 
-Tools and review workflow for mapping legacy Bragg/Finnplay game identifiers to
-Titan product identifiers, with a conservative fuzzy-matching pass and a
-human-review notebook.
+An auditable workflow for mapping legacy Bragg/Finnplay game codes to Titan
+product IDs. The process combines guarded matching, human review, and a single
+downstream mapping output for BigQuery.
 
-## Auditable rule-based dry run
+## The one file used downstream
 
-The assumptions used for conservative follow-up matching are documented in
-`MAPPING_RULES_AUDIT.md` and encoded in `mapping_rules.json`.
+`unified_game_mapping_for_bigquery.csv` is the **only** mapping CSV that should
+be uploaded to BigQuery or joined to `game_rounds` and `daily_player_games`.
 
-Generate pending candidates without changing any approved mapping:
+All other CSVs are source inputs, review logs, candidate queues, or audit
+reports. They support the decision-making process; they are not downstream
+mapping tables.
+
+## Data flow
+
+```text
+Legacy game/activity exports + Titan catalogue + existing reviewed mappings
+                              |
+                              v
+             fuzzy/rule-based candidate generation
+                              |
+                              v
+              iterative_discovery.ipynb human review
+                              |
+                              v
+              iterative_mapping_decisions.csv
+                              |
+                              v
+  approved_game_mapping_seed.csv + approved_game_mapping_audit.csv
+                              |
+                              v
+unified_game_mapping_for_bigquery.csv + unified_game_mapping_audit.csv
+                              |
+                              v
+       BigQuery mapping table -> game_rounds / daily_player_games
+```
+
+## File roles
+
+| Layer | Main files | Purpose |
+|---|---|---|
+| Source inputs | `old_bragg_games_source.csv`, `titan_product_mapping_source.csv`, `bragg_finnplay_mapping_reviewed_2.csv` | Legacy games, Titan catalogue, and pre-existing reviewed mappings. |
+| Review state | `iterative_mapping_decisions.csv`, `iterative_discovery.ipynb` | Human accept/reject/defer decisions and the notebook that records them. |
+| Candidate queues | `fuzzy_game_mapping_candidates_all.csv`, `provisional_same_provider_top_matches.csv`, `rule_based_*` | Suggestions awaiting review, deferred provider routes, or explicit promotion. |
+| Approved intermediate | `approved_game_mapping_seed.csv` | Inputs accepted in this run before they are combined with pre-existing mappings. |
+| Delivery output | `unified_game_mapping_for_bigquery.csv` | The sole BigQuery upload and downstream join file. |
+| Audit reports | `approved_game_mapping_audit.csv`, `unified_game_mapping_audit.csv`, `unified_game_mapping_conflicts.csv` | Explain provenance, risk flags, and conflict handling. |
+| Rules | `MAPPING_RULES_AUDIT.md`, `mapping_rules.json` | Human-readable assumptions and their machine-readable counterparts. |
+
+## Review principles
+
+- Prefer exact title and configuration identity; do not silently ignore editions,
+  jackpots, Megaways, or other material qualifiers.
+- A Titan mapped provider can be a delivery/catalogue route rather than the game
+  studio. Treat route ambiguity as **deferred**, not as a forced match or a
+  no-match.
+- Record a notebook note for every non-obvious decision—especially omitted
+  configuration tokens, studio-prefix evidence, or an intentionally excluded
+  variant.
+- `MAPPING_RULES_AUDIT.md` records which assumptions are active, provisional, or
+  disabled. Do not turn a single manual decision into a general matching rule.
+
+## Workflow
+
+### 1. Generate and review candidates
 
 ```bash
+venv/bin/python fuzzy_match.py
 venv/bin/python build_rule_based_auto_matches.py
 ```
 
-This writes:
+Use `iterative_discovery.ipynb` for same-provider, cross-provider, and
+provider-route review. Decisions are saved to `iterative_mapping_decisions.csv`.
 
-- `rule_based_auto_match_candidates.csv` — unique, guarded suggestions awaiting audit.
-- `rule_based_deferred_review.csv` — route ambiguities, ties and chronology blockers.
-- `rule_based_no_exact_match.csv` — remaining codes with no exact title candidate, for fuzzy review.
+The rule-based dry run produces:
 
-The script deliberately does not update `unified_game_mapping_for_bigquery.csv`,
-`iterative_mapping_decisions.csv`, or `fuzzy_game_mapping_auto_accepted.csv`.
+- `rule_based_auto_match_candidates.csv` — guarded suggestions pending review.
+- `rule_based_deferred_review.csv` — provider-route ambiguity, ties, and release-date blockers.
+- `rule_based_no_exact_match.csv` — remaining games without an exact title candidate.
 
-After an explicit review approval, run `promote_rule_based_auto_matches.py`, then
-run the normal seed and unified-mapping builders.
+Promotion of reviewed rule-based candidates is explicit:
+
+```bash
+venv/bin/python promote_rule_based_auto_matches.py
+```
+
+### 2. Build the accepted mapping and audit it
+
+After review decisions have been saved, run:
+
+```bash
+venv/bin/python build_final_mapping_seed.py
+venv/bin/python audit_approved_mapping.py
+venv/bin/python build_unified_game_mapping.py
+venv/bin/python audit_unified_game_mapping.py
+```
+
+Before uploading, sample `unified_game_mapping_audit.csv`, prioritising
+`review_cross_provider` and `review_release_after_activity` rows by `old_bets`.
+Correct any bad decision in the notebook, rerun the four commands above, and
+sample again.
+
+### 3. Load to BigQuery
+
+Upload `unified_game_mapping_for_bigquery.csv` to the approved mapping table.
+Use the stable legacy `aggregator_game_code` join described in
+[`sql/game_rounds_unified_mapping_changes.sql`](sql/game_rounds_unified_mapping_changes.sql)
+to update `game_rounds` and `daily_player_games`.
+
+Keep unresolved provider-route cases deferred. Export them—with legacy code,
+legacy provider/title, bets, and competing Titan routes—for Casino to verify.
+
+## Archive
+
+`archive/` contains superseded intermediate exports and malformed notebook
+snapshots that are not used by the current scripts. It is retained locally for
+traceability, not as an active data source.
 
 ## Repository policy
 
 This repository is code-first. Do **not** commit production extracts, BigQuery
 exports, mapping-decision CSVs, generated imports, or credentials. The
-`.gitignore` intentionally excludes these files. Use an approved BigQuery table
-or controlled shared location for the working data and audit outputs.
+`.gitignore` deliberately excludes those files. Use an approved BigQuery table
+or controlled shared location for working data and audit outputs.
 
 ## Setup
 
@@ -42,30 +133,10 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-Place the required local input exports alongside the scripts only while working
-locally. They are not part of the Git repository.
-
-## Workflow
-
-1. Run `fuzzy_match.py` to generate conservative candidates and auto-accepted
-   matches.
-2. Use `iterative_discovery.ipynb` for same-provider and cross-provider review.
-   Decisions are saved locally in `iterative_mapping_decisions.csv`.
-3. Run `build_final_mapping_seed.py` and `audit_approved_mapping.py`.
-4. Combine existing approved mappings with new decisions using
-   `build_unified_game_mapping.py`, then validate with
-   `audit_unified_game_mapping.py`.
-5. Upload the generated unified mapping CSV to BigQuery and apply it using the
-   SQL guidance in `sql/game_rounds_unified_mapping_changes.sql`.
-
 ## GitHub publishing checklist
 
-- Create a new **private** repository under the correct organisation.
-- Keep the production CSVs and BigQuery exports out of the initial commit.
+- Keep production CSVs and BigQuery exports out of Git.
 - Review `git status --ignored` before the first commit.
-- Add only code, SQL, documentation, and small synthetic fixtures under
-  `data/sample/`. Add the notebook only after it has been saved/exported as a
-  standard `.ipynb` file with cleared outputs.
-
-The prior local `.git` history was corrupt and pointed at an unrelated remote;
-start a fresh repository rather than pushing to that remote.
+- Commit code, SQL, documentation, and small synthetic fixtures only.
+- Add `iterative_discovery.ipynb` only once saved as a standard notebook with
+  cleared outputs.
