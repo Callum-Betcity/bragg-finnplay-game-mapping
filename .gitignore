@@ -1,0 +1,38 @@
+# Python environments and caches
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+
+# Jupyter and editor state
+.ipynb_checkpoints/
+.DS_Store
+.vscode/
+iterative_mapping_bookmark.json
+.git.corrupt-backup/
+
+# Credentials and local configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+service-account*.json
+
+# Production extracts, mapping decisions, and generated audit/import files.
+# Store these in BigQuery or an approved shared location, not in Git.
+*.csv
+*.tsv
+outputs/*
+!outputs/.gitkeep
+!data/sample/
+!data/sample/*.csv
+
+# Do not stage the current notebook until it has been saved/exported as a
+# standard .ipynb document with cleared outputs.
+iterative_discovery.ipynb
+
+# Local logs and temporary files
+*.log
+tmp/
+.tmp/

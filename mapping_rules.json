@@ -1,0 +1,315 @@
+{
+  "schema_version": 1,
+  "purpose": "Auditable rules and assumptions used when matching pre-migration game codes to Titan product IDs.",
+  "status_definitions": {
+    "verified": "Supported directly by the source data or an explicit, scoped naming convention.",
+    "supported": "Repeated evidence makes this useful for ranking, but it is not sufficient proof by itself.",
+    "provisional": "A working hypothesis that must remain manual-only until independently verified."
+  },
+  "provider_aliases": {
+    "bp": "blueprintgaming",
+    "bl": "blueprintgaming",
+    "blueprint": "blueprintgaming",
+    "png": "playngo",
+    "pg": "playngo",
+    "pp": "pragmaticplay",
+    "ppn": "pragmaticplay",
+    "ppd": "pragmaticplay",
+    "evo": "evolution",
+    "evold": "evolution",
+    "evr": "evolution",
+    "mg": "gamesglobal",
+    "mgs": "gamesglobal",
+    "mgsd": "gamesglobal",
+    "stt": "swintt",
+    "swi": "swintt",
+    "swintt": "swintt",
+    "gt": "greentube",
+    "gtb": "greentube",
+    "stk": "stakelogic",
+    "stk2": "stakelogic",
+    "stl": "stakelogic",
+    "stakelogiclive": "stakelogic",
+    "inm": "indigomagico2x",
+    "indigomagic": "indigomagico2x",
+    "indigomagico2x": "indigomagico2x",
+    "ins": "inspiredentertainment",
+    "inspired": "inspiredentertainment",
+    "bbr": "bluberigames",
+    "bluberi": "bluberigames",
+    "btg": "bigtimegaming",
+    "gc": "gamingcorps",
+    "rp": "rubyplay",
+    "bmng": "boominggames",
+    "gamomat": "gammomat",
+    "gammomat": "gammomat"
+  },
+  "title_abbreviations": {
+    "jk": ["jackpot", "king"],
+    "jpk": ["jackpot", "king"],
+    "jp": ["jackpot"],
+    "mw": ["megaways"],
+    "megs": ["megaways"],
+    "del": ["deluxe"],
+    "freespins": ["free", "spins"]
+  },
+  "source_provider_prefixes": {
+    "stakelogic": ["stk", "stk2", "stl"],
+    "inspiredentertainment": ["ins"],
+    "bigtimegaming": ["btg"],
+    "gamingcorps": ["gc"],
+    "indigomagico2x": ["inm"],
+    "bluberigames": ["bbr"],
+    "rubyplay": ["rp"],
+    "boominggames": ["booming", "bmng"],
+    "gammomat": ["gamm", "gam"],
+    "swintt": ["stt", "swi"],
+    "slingo": ["slg"],
+    "edict": ["edict"],
+    "elkstudios": ["elk"],
+    "hacksawgaming": ["hks"]
+  },
+  "titan_studio_product_prefixes": {
+    "stakelogic": ["sl", "stl"],
+    "inspiredentertainment": ["ins"],
+    "bigtimegaming": ["btg"],
+    "gamingcorps": ["gc"],
+    "indigomagico2x": ["im"],
+    "bluberigames": ["bb"],
+    "rubyplay": ["rp"],
+    "boominggames": ["bmng"]
+  },
+  "provider_route_review_keys": [
+    "slingo",
+    "edict",
+    "elkstudios",
+    "hacksawgaming",
+    "rubyplay",
+    "bluberigames",
+    "boominggames",
+    "atomicslotlab",
+    "gammomat",
+    "gamingcorps",
+    "inspiredentertainment",
+    "1x2gaming",
+    "indigomagico2x"
+  ],
+  "manual_only_provider_route_candidates": [],
+  "rules": [
+    {
+      "id": "R001",
+      "name": "Exact normalized title identity",
+      "category": "title_identity",
+      "status": "verified",
+      "auto_match_enabled": true,
+      "statement": "After scoped provider-prefix removal and abbreviation expansion, an exact title-token multiset is strong identity evidence.",
+      "guardrails": ["Require a unique strongest candidate", "Do not discard numeric, RTP, edition, configuration, or branded tokens"]
+    },
+    {
+      "id": "R002",
+      "name": "Provider alias normalization",
+      "category": "provider_identity",
+      "status": "verified",
+      "auto_match_enabled": true,
+      "statement": "Known historical provider codes may be normalized to their full provider identity using provider_aliases."
+    },
+    {
+      "id": "R003",
+      "name": "Scoped studio prefix evidence",
+      "category": "provider_identity",
+      "status": "supported",
+      "auto_match_enabled": true,
+      "statement": "A studio marker inside a Titan product name can identify the underlying studio even when mapped_provider_name is a distribution route. Example: SL_RunnerRunnerArcade identifies a StakeLogic game carried through the RelaxGaming delivery route.",
+      "guardrails": ["Apply only to the provider-specific prefixes listed in titan_studio_product_prefixes", "Never interpret arbitrary SL globally"]
+    },
+    {
+      "id": "R004",
+      "name": "Route-ambiguous provider quarantine",
+      "category": "workflow",
+      "status": "verified",
+      "auto_match_enabled": true,
+      "statement": "Slingo, Edict, ELK Studios, and Hacksaw Gaming remain in provider-route review and are not auto-matched until the preferred Titan distribution route is audited."
+    },
+    {
+      "id": "R005",
+      "name": "Distribution route is not studio identity",
+      "category": "provider_identity",
+      "status": "supported",
+      "auto_match_enabled": false,
+      "statement": "QTech, RelaxGaming, Oryx, OGS, GamesGlobal, iSoftBet, Spearhead and ST8 may be catalogue or distribution routes; their presence alone does not prove the original studio."
+    },
+    {
+      "id": "R006",
+      "name": "Non-Oryx/OGS tie preference",
+      "category": "ranking",
+      "status": "supported",
+      "auto_match_enabled": false,
+      "statement": "When title and other identity evidence are tied, a non-Oryx/OGS route may be ranked first for review.",
+      "guardrails": ["Ranking only", "Never resolve an automatic match solely with this preference"]
+    },
+    {
+      "id": "R007",
+      "name": "Numeric and configuration suffix preservation",
+      "category": "title_identity",
+      "status": "verified",
+      "auto_match_enabled": true,
+      "statement": "Numbers, RTP variants, table letters, editions and configuration suffixes are identity-bearing unless a family-specific rule proves equivalence."
+    },
+    {
+      "id": "R008",
+      "name": "Pragmatic Azure ordinal family",
+      "category": "family_exception",
+      "status": "verified",
+      "auto_match_enabled": true,
+      "statement": "Within the Pragmatic live-blackjack Azure family only, source ordinals 1 through 5 correspond to Titan suffixes a through e."
+    },
+    {
+      "id": "R009",
+      "name": "BetCity branded variant",
+      "category": "brand_identity",
+      "status": "supported",
+      "auto_match_enabled": false,
+      "statement": "BetCity is the operator brand; when a source code contains BetCity, a Titan Branded variant is stronger than an otherwise generic title.",
+      "guardrails": ["Manual review until repeated examples establish the naming convention"]
+    },
+    {
+      "id": "R010",
+      "name": "NBB means No Bonus Buy",
+      "category": "configuration",
+      "status": "verified",
+      "auto_match_enabled": false,
+      "statement": "NBB is an abbreviation of No Bonus Buy; both spellings describe the same source-side configuration."
+    },
+    {
+      "id": "R011",
+      "name": "No Bonus Buy maps to f0",
+      "category": "configuration",
+      "status": "provisional",
+      "auto_match_enabled": false,
+      "statement": "Historical reviewed mappings often pair NBB/No Bonus Buy with f0, but those mappings are not independent evidence that f0 universally means No Bonus Buy or distinguishes f0 from f1."
+    },
+    {
+      "id": "R012",
+      "name": "Release chronology guard",
+      "category": "audit",
+      "status": "verified",
+      "auto_match_enabled": true,
+      "statement": "A Titan release date later than the source game's first recorded activity blocks automatic acceptance and requires review."
+    },
+    {
+      "id": "R013",
+      "name": "No-match meaning",
+      "category": "workflow",
+      "status": "verified",
+      "auto_match_enabled": false,
+      "statement": "Confirm no match only when no plausible game identity exists; provider-route ambiguity should be deferred, not recorded as no match."
+    },
+    {
+      "id": "R014",
+      "name": "Ruby Play route ambiguity",
+      "category": "workflow",
+      "status": "supported",
+      "auto_match_enabled": true,
+      "statement": "Ruby Play frequently has identical RelaxGaming and Oryx copies. Keep it in provider-route review until a preferred route is verified.",
+      "guardrails": ["Do not auto-select RelaxGaming or Oryx from title identity alone"]
+    },
+    {
+      "id": "R016",
+      "name": "Bluberi Games route ambiguity",
+      "category": "workflow",
+      "status": "supported",
+      "auto_match_enabled": true,
+      "statement": "Bluberi titles may appear through GamesGlobal and Oryx. Keep them in provider-route review until a preferred route is verified.",
+      "guardrails": ["Do not auto-select GamesGlobal or Oryx from title identity alone"]
+    },
+    {
+      "id": "R017",
+      "name": "Booming Games route ambiguity",
+      "category": "workflow",
+      "status": "supported",
+      "auto_match_enabled": true,
+      "statement": "Booming titles may appear through GamesGlobal, iSoftBet, RelaxGaming and other catalogue routes. Keep them in provider-route review until a preferred route is verified.",
+      "guardrails": ["A Booming-like product-code fragment is supporting provenance only, not a route-selection rule"]
+    },
+    {
+      "id": "R018",
+      "name": "Atomic Slot Lab route ambiguity",
+      "category": "workflow",
+      "status": "supported",
+      "auto_match_enabled": true,
+      "statement": "Atomic Slot Lab titles may appear through Oryx and other catalogue routes. Keep them in provider-route review until a preferred route is verified.",
+      "guardrails": ["An ASL marker can identify the studio but does not, by itself, choose the mapped-provider route"]
+    },
+    {
+      "id": "R019",
+      "name": "Gammomat route ambiguity",
+      "category": "workflow",
+      "status": "supported",
+      "auto_match_enabled": true,
+      "statement": "Gammomat titles may appear through GamesGlobal and Oryx. Keep them in provider-route review until a preferred route is verified.",
+      "guardrails": ["A GAM marker identifies the studio but does not, by itself, choose GamesGlobal or Oryx"]
+    },
+    {
+      "id": "R020",
+      "name": "Gaming Corps route ambiguity",
+      "category": "workflow",
+      "status": "supported",
+      "auto_match_enabled": true,
+      "statement": "Gaming Corps titles may appear through RelaxGaming, Oryx, OGS and other catalogue routes. Keep them in provider-route review until a preferred route is verified.",
+      "guardrails": ["A GC marker identifies the studio but does not, by itself, choose a mapped-provider route"]
+    },
+    {
+      "id": "R021",
+      "name": "Inspired Entertainment route ambiguity",
+      "category": "workflow",
+      "status": "supported",
+      "auto_match_enabled": true,
+      "statement": "Inspired titles may appear through GamesGlobal, OGS, RelaxGaming and other catalogue routes. Keep them in provider-route review until a preferred route is verified.",
+      "guardrails": ["An INS marker identifies the studio but does not, by itself, choose a mapped-provider route"]
+    },
+    {
+      "id": "R022",
+      "name": "1X2gaming route ambiguity",
+      "category": "workflow",
+      "status": "supported",
+      "auto_match_enabled": true,
+      "statement": "1X2gaming titles may appear through RelaxGaming, OGS and other catalogue routes. Keep them in provider-route review until a preferred route is verified.",
+      "guardrails": ["A 1x2 marker identifies the studio but does not, by itself, choose a mapped-provider route"]
+    },
+    {
+      "id": "R023",
+      "name": "Direct mapped-provider route preference",
+      "category": "provider_identity",
+      "status": "verified",
+      "auto_match_enabled": true,
+      "statement": "When exact title/configuration candidates exist, prefer the one whose mapped_provider_name equals the normalized old provider over otherwise identical catalogue-route copies.",
+      "guardrails": ["Requires exact game identity as well as provider equality", "Does not override an active provider-route quarantine"]
+    },
+    {
+      "id": "R024",
+      "name": "Indigo Magic / O2X route ambiguity",
+      "category": "workflow",
+      "status": "supported",
+      "auto_match_enabled": true,
+      "statement": "Indigo Magic / O2X titles may appear through Oryx, GamesGlobal and other catalogue routes. Keep them in provider-route review until a preferred route is verified.",
+      "guardrails": ["An IM or OR-style product-code fragment is supporting provenance only, not a route-selection rule"]
+    },
+    {
+      "id": "R025",
+      "name": "Flower Fortune Supreme legacy 94 omission",
+      "category": "manual_scoped_exception",
+      "status": "supported",
+      "auto_match_enabled": false,
+      "statement": "The legacy source RELAX_SBLT_FLOWER_FORTUNE_SUPREME_94 may map to RG_F_FlowerFortunesSupreme (Titan 687028): the core title and direct RelaxGaming route agree, while Titan omits the 94 suffix.",
+      "guardrails": ["Manual decision only", "Does not override R007", "Do not drop 94 from other titles without corroborating title and route evidence"]
+    },
+    {
+      "id": "R015",
+      "name": "Manual decision precedence",
+      "category": "provenance",
+      "status": "verified",
+      "auto_match_enabled": true,
+      "statement": "Existing manual decisions and unified mappings are never overwritten by the rule-based dry run."
+    }
+  ]
+}

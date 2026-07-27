@@ -1,0 +1,5 @@
+# Tested locally with Python 3.14; Python 3.11+ is recommended.
+pandas>=2.2,<3
+rapidfuzz>=3.0,<4
+ipywidgets>=8.0,<9
+jupyterlab>=4.0,<5
