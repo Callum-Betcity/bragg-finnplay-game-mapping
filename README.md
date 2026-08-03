@@ -112,6 +112,25 @@ to update `game_rounds` and `daily_player_games`.
 Keep unresolved provider-route cases deferred. Export them—with legacy code,
 legacy provider/title, bets, and competing Titan routes—for Casino to verify.
 
+### 4. Classify subproviders for dashboarding
+
+Keep provider taxonomy separate from the activity facts. The taxonomy has three
+reporting dimensions:
+
+- `aggregation_platform` — OSS, OGS, Relax, or Bragg.
+- `provider_group` — Evolution, Light & Wonder, Relax, or Bragg.
+- `game_subprovider` — for example NetEnt, ELK Studios, Silver Bullet, or Fazi.
+
+[`sql/game_subprovider_taxonomy.sql`](sql/game_subprovider_taxonomy.sql) builds
+`test_callum.game_subprovider_taxonomy` from exact legacy-provider evidence in
+the unified mapping. It marks any Titan product with conflicting supplier
+evidence as `review`; dashboard queries must join only `approved` taxonomy
+rows. The script also includes the safe `daily_player_games` join pattern.
+
+This deliberately does not write taxonomy columns into `game_rounds` or
+`daily_player_games`. Join it in a reporting view first; materialise an
+enriched fact table only if dashboard performance requires it.
+
 ## Archive
 
 `archive/` contains superseded intermediate exports and malformed notebook
